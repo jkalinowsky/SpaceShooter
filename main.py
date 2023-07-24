@@ -1,8 +1,7 @@
 import os
-import sys
-import time
 import random
 import pygame
+import asyncio
 
 pygame.font.init()
 
@@ -20,6 +19,12 @@ red_img = pygame.transform.rotate(pygame.image.load(os.path.join('assets', 'enem
 yellow_laser = pygame.image.load(os.path.join('assets', 'pixel_laser_yellow.png'))
 green_laser = pygame.image.load(os.path.join('assets', 'pixel_laser_green.png'))
 red_laser = pygame.image.load(os.path.join('assets', 'pixel_laser_red.png'))
+# obstacles
+meteorite = pygame.image.load(os.path.join('assets', 'meteorite.png'))
+# explosions
+explosions = [pygame.transform.scale(pygame.image.load(os.path.join('assets', 'explosion1.png')), (60, 60)),
+              pygame.transform.scale(pygame.image.load(os.path.join('assets', 'explosion2.png')), (60, 60)),
+              pygame.transform.scale(pygame.image.load(os.path.join('assets', 'explosion3.png')), (60, 60))]
 
 
 # classes
@@ -58,6 +63,8 @@ class Ship:
         self.laser_img = None
         self.lasers = []
         self.cool_down_counter = 0
+        self.counter = 0
+        self.velocity = 1
 
     def move_lasers(self, vel, obj):
         self.cooldown()
@@ -96,7 +103,7 @@ class Player(Ship):
         self.mask = pygame.mask.from_surface(self.ship_img)
         self.max_health = health
 
-    def move_lasers(self, vel, objs):
+    def move_lasers(self, vel, objs, obst):
         self.cooldown()
         for laser in self.lasers:
             laser.move(vel)
@@ -105,9 +112,12 @@ class Player(Ship):
             else:
                 for obj in objs:
                     if laser.collision(obj):
-                        objs.remove(obj)
+                        obj.health -= 100
                         if laser in self.lasers:
                             self.lasers.remove(laser)
+                for obs in obst:
+                    if laser.collision(obs):
+                        self.lasers.remove(laser)
 
     def draw(self, window):
         window.blit(self.ship_img, (self.x, self.y))
@@ -127,20 +137,22 @@ class Enemy(Ship):
         self.mask = pygame.mask.from_surface(self.ship_img)
 
     def move(self, vel_y, vel_x):
-        self.y += vel_y
+        self.y += self.velocity
         # self.x += vel_x
 
     def draw(self, window):
-        window.blit(self.ship_img, (self.x, self.y))
+
         for laser in self.lasers:
             laser.e_draw(window)
+        if self.health != 0:
+            window.blit(self.ship_img, (self.x, self.y))
 
 
-'''class Obstacle:
+class Obstacle:
     def __init__(self, x, y):
         self.x = x
         self.y = y
-        self.img = red_laser
+        self.img = meteorite
         self.mask = pygame.mask.from_surface(self.img)
 
     def draw(self, window):
@@ -149,11 +161,14 @@ class Enemy(Ship):
     def move(self, vel):
         self.y += vel
 
-    def off_screen(self, height):
-        return height > self.y > 0
+    def get_height(self):
+        return self.img.get_height()
+
+    def get_width(self):
+        return self.img.get_width()
 
     def collision(self, obj):
-        return collide(obj, self)'''
+        return collide(obj, self)
 
 
 def collide(obj1, obj2):
@@ -162,7 +177,7 @@ def collide(obj1, obj2):
     return obj1.mask.overlap(obj2.mask, (offset_x, offset_y)) is not None
 
 
-def main():
+async def main():
     run = True
 
     lost = False
@@ -178,6 +193,7 @@ def main():
     obstacles = []
     wave_length = 5
     enemy_vel = 1
+    obs_vel = 2
 
     p_laser_vel = 15
     e_laser_vel = 8
@@ -192,10 +208,27 @@ def main():
         screen.blit(background, (0, 0))
         # draw lives
         lives_label = main_font.render(f'Lives: {lives}', 1, (255, 255, 255))
-        screen.blit(lives_label, lives_label.get_rect(center=(WIDTH // 2, 50)))
+        screen.blit(lives_label, lives_label.get_rect(center=(WIDTH // 2, 30)))
+        levels_label = main_font.render(f'Level: {level}', 1, (255, 255, 255))
+        screen.blit(levels_label, levels_label.get_rect(center=(WIDTH // 2, 70)))
 
         for en in enemies:
             en.draw(screen)
+            if en.health == 0:
+                en.velocity = 0
+                if 0 <= en.counter < 9:
+                    screen.blit(explosions[0], (en.x, en.y))
+                if 9 <= en.counter < 18:
+                    screen.blit(explosions[1], (en.x, en.y))
+                if 18 <= en.counter < 27:
+                    screen.blit(explosions[2], (en.x, en.y))
+                en.counter += 1
+                if en.counter == 27:
+                    enemies.remove(en)
+                    en.counter = 0
+
+        for obs in obstacles:
+            obs.draw(screen)
 
         player.draw(screen)
 
@@ -226,13 +259,14 @@ def main():
 
         if len(enemies) == 0:
             level += 1
-            wave_length += 3
+            wave_length += 2
             for i in range(wave_length):
                 enemy = Enemy(random.randrange(50, WIDTH - 50), random.randrange(-1500, -100),
                               random.choice(['red', 'green']))
-                # obstacle = Obstacle(random.randrange(50, WIDTH - 50), random.randrange(-1500, -100))
                 enemies.append(enemy)
-                # obstacles.append(obstacle)
+            for i in range(random.randrange(1, wave_length)):
+                obstacle = Obstacle(random.randrange(50, WIDTH - 50), random.randrange(-3000, -100))
+                obstacles.append(obstacle)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -262,13 +296,18 @@ def main():
                 lives -= 1
                 enemies.remove(enemy)
 
-        '''for obstacle in obstacles[:]:
-            obstacle.move(enemy_vel)
+        for obstacle in obstacles[:]:
+            obstacle.move(obs_vel)
 
-            if obstacle.off_screen(HEIGHT):
-                obstacles.remove(obstacle)'''
+            if collide(obstacle, player):
+                lives -= 1
+                obstacles.remove(obstacle)
+            if obstacle.y + obstacle.get_height() > HEIGHT:
+                obstacles.remove(obstacle)
 
-        player.move_lasers(-p_laser_vel, enemies)
+        player.move_lasers(-p_laser_vel, enemies, obstacles)
+
+        await asyncio.sleep(0)  # Very important, and keep it 0
 
 
-main()
+asyncio.run(main())
