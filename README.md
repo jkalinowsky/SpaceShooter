@@ -37,7 +37,7 @@ python main.py
 f you want to contribute to this project, feel free to fork this repository, make your changes, and submit a pull request. I welcome any enhancements, bug fixes, or new features.
 
 ## License
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Acknowledgments
 - This game was inspired by classic space shooter arcade games and developed using the Pygame library.
