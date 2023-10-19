@@ -4,7 +4,7 @@ Space shooter is a classic arcade 2D space-themed shoot'em game created with Pyg
 ## How to run
 Follow these steps to run this app on your local machine:
 ### Prerequisites
-1. Make sure you have Python installed on your computer. You can download it from python.org.
+1. Make sure you have Python installed on your computer. You can download it from https://www.python.org.
 2. You will also need to have the Pygame library installed. If you don't have it, you can install it using pip:
 ```bash
 pip install pygame
@@ -27,6 +27,8 @@ python main.py
    - Use WSAD to move your spacecraft.
    - Press the spacebar to fire your weapons.
    - Avoid meteorites and enemy spacecrafts and their projectiles.
+#### You can also run the game through website: https://jkalinowsky.itch.io/space-shooter-v1 
+
 ## Troubleshooting
 - If you encounter any issues running the game, make sure you have Python and Pygame installed correctly.
 - If you face any specific problems related to the game or find any bugs, please open an issue on this repository, providing details about the problem you encountered.
